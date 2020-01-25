@@ -33,33 +33,7 @@ channel ADC without need for any input to initiate sampling.
 #include <pigpio.h>
 #include <math.h>
 #include <string.h>
-
-/////// USER SHOULD MAKE SURE THESE DEFINES CORRESPOND TO THEIR SETUP ///////
-#define ADCS 5      // Number of connected MCP3201.
-
-#define OUTPUT_DATA "/mnt/home/pigpio/data/adcData.bin" // path and filename to dump buffered ADC data
-
-/* RPi PIN ASSIGNMENTS */
-#define MISO1 4     // ADC 1 MISO (BCM 4 aka GPIO 4).
-#define MISO2 5     //     2
-#define MISO3 6     //     3
-#define MISO4 12    //     4
-#define MISO5 13    //     5
-
-#define MOSI 10     // GPIO for SPI MOSI (BCM 10 aka GPIO 10 aka SPI_MOSI). MOSI not in use here due to single ch. ADCs, but must be defined anyway.
-#define SPI_SS 8    // GPIO for slave select (BCM 8 aka GPIO 8 aka SPI_CE0).
-#define CLK 11      // GPIO for SPI clock (BCM 11 aka GPIO 11 aka SPI_CLK).
-/* END RPi PIN ASSIGNMENTS */
-
-#define BITS 12            // Bits per sample.
-#define BX 4               // Bit position of data bit B11. (3 first are t_sample + null bit)
-#define B0 (BX + BITS - 1) // Bit position of data bit B0.
-
-#define NUM_SAMPLES_IN_BUFFER 300 // Generally make this buffer as large as possible in order to cope with reschedule.
-
-#define REPEAT_MICROS 32 // Reading every x microseconds. Must be no less than 2xB0 defined above
-
-#define DEFAULT_NUM_SAMPLES 31250 // Default number of samples for printing in the example. Should give 1sec of data at Tp=32us.
+#include "adc.h"
 
 int MISO[ADCS]={MISO1, MISO2, MISO3, MISO4, MISO5}; // Must be updated if you change number of ADCs/MISOs above
 /////// END USER SHOULD MAKE SURE THESE DEFINES CORRESPOND TO THEIR SETUP ///////
@@ -74,6 +48,8 @@ int MISO[ADCS]={MISO1, MISO2, MISO3, MISO4, MISO5}; // Must be updated if you ch
  * \param bits Bits per reading
  * \param buf Output buffer
 */
+
+
 void getReading(int adcs, int *MISO, int OOL, int bytes, int bits, char *buf)
 {
    int p = OOL;
@@ -89,27 +65,8 @@ void getReading(int adcs, int *MISO, int OOL, int bytes, int bits, char *buf)
 }
 
 
-int readADC(int argc, char *argv[])
+int readADC(int num_samples,uint16_t *val)
 {
-    // Path to your data directory/file from previous define
-    char output_filename[100] = "";
-    strcpy(output_filename,OUTPUT_DATA);
-    if(argc >= 3) {
-        strcpy(output_filename, argv[2]);
-    }
-    // Parse command line arguments
-    long num_samples = 0;
-    if (argc <= 1) {
-        fprintf(stderr, "Usage: %s NUM_SAMPLES\n\n"
-                        "Example: %s %d\n", argv[0], argv[0], DEFAULT_NUM_SAMPLES);
-        exit(1);
-    }
-    sscanf(argv[1], "%ld", &num_samples);
-
-
-
-    // Array over sampled values, into which data will be saved
-    uint16_t *val = (uint16_t*)malloc(sizeof(uint16_t)*num_samples*ADCS);
 
     // SPI transfer settings, time resolution 1us (1MHz system clock is used)
     rawSPI_t rawSPI =
@@ -238,23 +195,5 @@ int readADC(int argc, char *argv[])
 
     double output_nominal_period_us = floor(nominal_period_us); //the clock is accurate only to us resolution
 
-
-    
-
-    // Write sample period and data to file
-    FILE *adc_data_file = fopen(output_filename, "wb+");
-    if (adc_data_file == NULL) {
-        fprintf(stderr, "# Couldn't open file for writing: %s (did you remember to change OUTPUT_DATA?)\n", output_filename);
-	return 1;
-    }
-
-    fwrite(&output_nominal_period_us, sizeof(double), 1, adc_data_file);
-    fwrite(val, sizeof(uint16_t), ADCS*num_samples, adc_data_file);
-    fclose(adc_data_file);
-    printf("# Data written to file. Program ended successfully.\n\n");
-
-    gpioTerminate();
-    free(val);
-
-    return 0;
+    return val;
 }

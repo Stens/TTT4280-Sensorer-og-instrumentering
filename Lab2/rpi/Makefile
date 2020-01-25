@@ -1,2 +1,2 @@
 all:
-	gcc -o adc_sampler ADC_new.c -lpigpio -lpthread -lm
+	gcc -o adc_sampler_server adc.c stream_data_server.c -lpigpio -lpthread -lm

@@ -5,15 +5,15 @@
 #include <string.h> 
 #include <sys/socket.h> 
 #include <sys/types.h> 
+#include <pthread.h>
 #include "adc.h"
 #include "stream_data_server.h"
 // Function designed for chat between client and server. 
 void sendData(int sockfd) 
 { 
 	char buff[MAX]; 
-	int n; 
     int num_samples;
-    char * pEnd;
+    char *pEnd;
 	int data_chunks;	
 
 	for (;;) { 
@@ -37,7 +37,6 @@ void sendData(int sockfd)
 			// and send vals to client 
 			for (size_t i = 0; i < data_chunks; i++)
 			{
-
 				memcpy(buff, val+i, MAX);
 				write(sockfd, val, MAX); 
 			}
@@ -57,6 +56,50 @@ void sendData(int sockfd)
 		
 	} 
 } 
+
+void streamData(int sockfd) { // Have to use threads
+  	char buff[MAX]; 
+    char * pEnd;
+	int data_chunks;	
+
+	for (;;) { 
+		bzero(buff, MAX); 
+
+		// read the message from client and copy it in buffer 
+		uint16_t *val = (uint16_t*)malloc(sizeof(uint16_t)*MAX);
+		read(sockfd, buff, sizeof(buff)); 
+		// print buffer which contains the client contents 
+		printf("From client: %s\t To client : ", buff); 
+        if (strncmp("S", buff, 1)) {
+			memmove (buff, buff+2, strlen (buff));
+
+			// Need to use threads here
+            readADC(MAX/ADCS, val); // source of segmentation error?
+			
+			bzero(buff, MAX); 
+			
+
+			// and send vals to client 
+			
+			memcpy(buff, val, MAX);
+			write(sockfd, val, MAX); 
+			
+
+        }
+		// if msg contains "Exit" then server exit and chat ended. 
+		else if (strncmp("exit", buff, 4) == 0) { 
+			printf("Server Exit...\n"); 
+			break; 
+		} 
+		else
+		{
+			strcpy(buff, "Error: invalid request");
+			write(sockfd, buff, sizeof(buff)); 
+		}
+		
+	} 
+
+}
 
 // Driver function 
 int main() 

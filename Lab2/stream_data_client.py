@@ -31,7 +31,7 @@ def get_measurements(num_samples):
             if i == stop:
                 not_done = False
 
-        s.send(bytes("exit"),"utf-8")
+        s.send(bytes(("exit"),"utf-8"))
     print("Received measurements")
     cleaned_data = full_data[:ADCS*num_samples]
     return cleaned_data 

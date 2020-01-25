@@ -19,7 +19,7 @@ def get_measurements(num_samples):
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect((HOST, PORT))
-        s.send(bytes("R"+" "+str(num_samples),"utf-8") # R=Recording , S=stream 
+        s.send(bytes("R"+" "+str(num_samples),"utf-8")) # R=Recording , S=stream 
 
         while not_done:
 
@@ -36,10 +36,13 @@ def get_measurements(num_samples):
     cleaned_data = full_data[:ADCS*num_samples]
     return cleaned_data 
 
-def write_msg_to_file(filename, msg);
+def write_msg_to_file(filename, msg):
     f = open("./measurements/"+ filename, 'wb')
     f.write(msg)
     f.close()
+
+
+
 
 
 

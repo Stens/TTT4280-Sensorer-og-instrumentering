@@ -8,7 +8,8 @@
 #include <pthread.h>
 #include "adc.h"
 #include "stream_data_server.h"
-// Function designed for chat between client and server. 
+
+
 void sendData(int sockfd) 
 { 
 	char buff[MAX]; 
@@ -16,7 +17,7 @@ void sendData(int sockfd)
     char *pEnd;
 	int data_chunks;	
 
-	for (;;) { 
+	while (1) { 
 		bzero(buff, MAX); 
 
 		// read the message from client and copy it in buffer 
@@ -27,9 +28,9 @@ void sendData(int sockfd)
 			memmove (buff, buff+2, strlen (buff));
 
             num_samples = strtol(buff,&pEnd,10);
-			uint16_t *val = (uint16_t*)malloc(sizeof(uint16_t)*num_samples*ADCS);
+			uint16_t val = (uint16_t*)malloc(sizeof(uint16_t)*num_samples*ADCS);
 
-            readADC(num_samples, val);
+            readADC(num_samples, &val);
 			
 			bzero(buff, MAX); 
 			data_chunks = (ADCS*num_samples + (MAX / 2)) / MAX;
@@ -38,9 +39,10 @@ void sendData(int sockfd)
 			for (size_t i = 0; i < data_chunks; i++)
 			{
 				memcpy(buff, val+i, MAX);
-				write(sockfd, val, MAX); 
+				write(sockfd, buff, MAX); 
 			}
 			
+			free(val);
 
         }
 		// if msg contains "Exit" then server exit and chat ended. 
@@ -60,9 +62,10 @@ void sendData(int sockfd)
 void streamData(int sockfd) { // Have to use threads
   	char buff[MAX]; 
     char * pEnd;
-	int data_chunks;	
+	int totSamples = MAX/ADCS;
+	pthread_t thread; 
 
-	for (;;) { 
+	while (1) { 
 		bzero(buff, MAX); 
 
 		// read the message from client and copy it in buffer 
@@ -71,18 +74,22 @@ void streamData(int sockfd) { // Have to use threads
 		// print buffer which contains the client contents 
 		printf("From client: %s\t To client : ", buff); 
         if (strncmp("S", buff, 1)) {
+            // streamADC(); // source of segmentation error?
+			pthread_create(&thread, NULL, streamADC, NULL);
 			memmove (buff, buff+2, strlen (buff));
 
 			// Need to use threads here
-            readADC(MAX/ADCS, val); // source of segmentation error?
+
+
 			
 			bzero(buff, MAX); 
 			
 
+    		pthread_join(thread, NULL);
 			// and send vals to client 
 			
-			memcpy(buff, val, MAX);
-			write(sockfd, val, MAX); 
+			memcpy(buff, streamVal, MAX);
+			write(sockfd, buff, MAX); 
 			
 
         }

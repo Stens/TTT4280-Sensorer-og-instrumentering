@@ -27,6 +27,7 @@ channel ADC without need for any input to initiate sampling.
 */
 /////// USER SHOULD MAKE SURE THESE DEFINES CORRESPOND TO THEIR SETUP ///////
 #define ADCS 5      // Number of connected MCP3201.
+#define MAX  1024   // Number of bytes being sent at once.
 
 #define OUTPUT_DATA "/home/pi/adcData.bin" // path and filename to dump buffered ADC data
 
@@ -52,7 +53,10 @@ channel ADC without need for any input to initiate sampling.
 
 #define DEFAULT_NUM_SAMPLES 31250 // Default number of samples for printing in the example. Should give 1sec of data at Tp=32us.
 
+char streamVal[MAX];   // For streaming
 
 void getReading(int adcs, int *MISO, int OOL, int bytes, int bits, char *buf);
 
-int readADC(int num_samples,uint16_t *val);
+void readADC(int num_samples,uint16_t *val);
+
+void *streamADC();

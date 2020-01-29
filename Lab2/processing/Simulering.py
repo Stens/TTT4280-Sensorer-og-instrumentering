@@ -6,95 +6,90 @@ Created on Mon Jan 27 15:20:57 2020
 """
 
 import numpy as np
-from scipy import signal
 import matplotlib.pyplot as plt
+import xcorr
 
-
-    
-def calculate_distance(data,i):
-    # Get the three microphones
-    #[Ts, data] = raspi_import("./stens.bin")
-
-    # Seperate the three mics and remove DC
-    mic1 = signal.detrend(data[:,0], type="constant") 
-    mic2 = signal.detrend(data[:,1], type="constant")
-    mic3 = signal.detrend(data[:,2], type="constant")
-
-    length = len(mic1) # Get length of samples
-
-    # Crosscorrelation
-    xcorr21 = np.correlate(mic1, mic2, "full")
-    xcorr31 = np.correlate(mic1, mic3, "full")
-    xcorr32 = np.correlate(mic2, mic3, "full")
-    
-    if(i == 10):
-        plt.plot(xcorr21)
-        plt.plot(xcorr31)
-        plt.plot(xcorr32)
-        plt.show()
-
-    # Get max lag
-    maxlag21 = np.argmax(xcorr21) - length
-    maxlag31 = np.argmax(xcorr31) - length
-    maxlag32  = np.argmax(xcorr32) - length
-
-
-    # Calculate angle
-    # Lame calculations
-    # theta = np.arctan(np.sqrt(3) * ((maxlag21+ maxlag31)/(maxlag21-maxlag31 -2*maxlag32))
-
-    # Calculate angles cool way B-)
-
-    xish = (-1/2*maxlag21 + 1/2*maxlag31 + maxlag32)
-    b = xish < 0
-    theta = np.arctan(np.sqrt(3) * ((maxlag21+ maxlag31)/(maxlag21-maxlag31 -2*maxlag32))) + b*np.pi
-    while(theta > np.pi/2):
-        theta -= np.pi
-    return -theta
-    
-    
+  
     
 ## Generate some shiiit
-N = 100
-c = 343
-d = 0.07
-Fs = 31250
-thetas = np.linspace(-90*np.pi/180, 90*np.pi/180, num=N)
-thetaestimates = np.zeros(N)
-length = 50
-M = 3
 
+# Parameters
+N = 100 # Num angles
+c = 343 # Speed of Sound
+d = 0.07 # Distance between mics
+nF = 50
+F = np.linspace(20, 20000, num=nF) # Base frequency of signal
+Fs = 31250 # Sample frequency
+length = 300 # Num samples
+M = 1 # Num harmonics in signal
+L = 1 # Number of repetitions with different noise
+mu = 0 # Mean of gaussian noise
+sigma = 0.5 # Std of gaussian noise
+
+
+thetas = np.linspace(-np.pi/2.2, np.pi/2.2, num=N)
+thetaestimates = np.zeros(N)
+thetaestimates1 = np.zeros(N)
+thetaestimates2 = np.zeros(N)
+thetaestimates5 = np.zeros(N)
+ 
 ns=np.linspace(0,N-1,num=N)
 
-
-n = np.linspace(0,(length-1)/3, num=length)
-sig = 0
-for i in range(M):
-    sig += np.sin(i*n)
-    
-
+mse = np.zeros((nF,3))
 maxlag = int(np.ceil(d/np.sqrt(3)/c*Fs))
 
+for f in range(nF):
+    
+    # Signal generation
+    n = np.linspace(0,(length-1)/3, num=length)
+    sig = 0
+    for i in range(M+1):
+        sig += np.sin(i*n*F[f]/Fs)
+    sig /= M
+        
+    
+    
+    
 
-for i in range(N):
-    data = np.zeros((length-2*maxlag,3))
-    lag1 = int(maxlag*np.cos(thetas[i]-np.pi/2))
-    lag2 = int(maxlag*np.cos(thetas[i]+30*np.pi/180))
-    lag3 = int(maxlag*np.cos(thetas[i]+150*np.pi/180))
+    for i in range(N):
+        data = np.zeros((length-2*maxlag,3))
+        lag1 = int(maxlag*np.cos(thetas[i]-np.pi/2))
+        lag2 = int(maxlag*np.cos(thetas[i]+30*np.pi/180))
+        lag3 = int(maxlag*np.cos(thetas[i]+150*np.pi/180))
+        
+        data[:,0] = sig[maxlag+lag1:len(sig)-(maxlag-lag1)]
+        data[:,1] = sig[maxlag+lag2:len(sig)-(maxlag-lag2)] 
+        data[:,2] = sig[maxlag+lag3:len(sig)-(maxlag-lag3)]
+        for j in range(3):
+            data[:,j] += np.random.normal(mu, sigma, length-2*maxlag)
+        """if(i==int(2*N/3)):
+            m = np.linspace(0,length-2*maxlag-1,num=length-2*maxlag)
+            plt.plot(m,data[:,0],m,data[:,1],m,data[:,2])
+            plt.show()
+            xcorr.calcAngleWithPlotEfficient(data,Fs,d,c)
+            xcorr.calcAngleWithPlot(data)"""
+        
+        
+        thetaestimates[i] = xcorr.calcAngle(data)
+        thetaestimates1[i] = xcorr.calcAngleEfficient(data, Fs, d, c, 1)
+        thetaestimates2[i] = xcorr.calcAngleEfficient(data, Fs, d, c, 2)
+        mse[f,0] += (thetas[i]-thetaestimates[i])**2
+        mse[f,1] += (thetas[i]-thetaestimates1[i])**2
+        mse[f,2] += (thetas[i]-thetaestimates2[i])**2
+    if(f%5==0):
+        print("Iteration {} done".format(f))
     
-    data[:,0] = sig[maxlag+lag1:len(sig)-(maxlag-lag1)]
-    data[:,1] = sig[maxlag+lag2:len(sig)-(maxlag-lag2)]
-    data[:,2] = sig[maxlag+lag3:len(sig)-(maxlag-lag3)]
-    if(i==int(2*N/3)):
-        m = np.linspace(0,length-2*maxlag-1,num=length-2*maxlag)
-        plt.plot(m,data[:,0],m,data[:,1],m,data[:,2])
-        plt.show()
-    
-    
-    thetaestimates[i] = calculate_distance(data,i)
 
-plt.plot(ns,thetas*180/np.pi, ns,thetaestimates*180/np.pi)
-plt.legend(("Real angle","Estimated angle"))
-print(thetaestimates[20]*180/np.pi)
-    
+plt.plot(ns,thetas*180/np.pi, ns,thetaestimates*180/np.pi, ns,thetaestimates1*180/np.pi, ns,thetaestimates2*180/np.pi)
+plt.legend(("Real angle","Estimated angle", "New Estimate", "2xsampling"))
+plt.show()
+
+mse = np.sqrt(mse/N)*180/np.pi
+
+plt.plot(F, mse[:,0], F, mse[:,1], F, mse[:,2])
+plt.legend(("full", "partial", "2xsampling part"))
+plt.xlabel("Frequency [Hz]")
+plt.ylabel("MSE")
+plt.title("MSE for different methods") 
+
     

@@ -11,7 +11,6 @@
 #include "stream_data_server.h"
 
 
-
 void sendData(int sockfd) 
 { 
 	char buff[MAX]; 
@@ -21,6 +20,8 @@ void sendData(int sockfd)
 	int wid;
 	int done = 0;
 	rawWaveInfo_t rwi = initADC(&wid);
+    uint16_t *stream_vals = (uint16_t*)malloc(sizeof(uint16_t)*NUM_STREAM_SAMPLES*ADCS);
+
 
 	while (1) { 
 		bzero(buff, MAX); 
@@ -32,9 +33,9 @@ void sendData(int sockfd)
 			strncpy(buff, buff+4, 4);
 			memset(buff+4,'\0',4);
             num_samples = strtol(buff,&pEnd,10);
-			uint16_t *val = (uint16_t*)malloc(sizeof(uint16_t)*num_samples*ADCS);
+			uint16_t *read_val = (uint16_t*)malloc(sizeof(uint16_t)*num_samples*ADCS);
 
-            recordSamples(rwi, wid, num_samples, val);
+			readADC(rwi, wid, sockfd, done, num_samples ,stream_vals);
 			
 			bzero(buff, MAX); 
 			data_chunks = (ADCS*num_samples + (MAX / 2)) / MAX;
@@ -43,20 +44,19 @@ void sendData(int sockfd)
 			// and send vals to client 
 			for (size_t i = 0; i <= data_chunks; i++)
 			{
-				memcpy(buff, val+(i*MAX), MAX);
-				write(sockfd, buff, MAX); 
+				write(buff, read_val+(i*sizeof(uint16_t)*NUM_STREAM_SAMPLES*ADCS), 
+				sizeof(uint16_t)*NUM_STREAM_SAMPLES*ADCS);	 
 			}
-			
-			free(val);
-
+			free(read_val);
+			done = 1;
         }
 
 		else if (!strncmp("STREAM", buff, 6)) 
 		{
 
 			// and send vals to client 
-			readADC(rwi, wid, sockfd, done, buff);
-			write(sockfd, buff, MAX); 
+			readADC(rwi, wid, sockfd, done, NUM_STREAM_SAMPLES ,stream_vals);
+			write(sockfd, stream_vals, sizeof(uint16_t)*NUM_STREAM_SAMPLES*ADCS); // = MAX = 300 ??
 			done = 1;
 
 		}
@@ -65,10 +65,9 @@ void sendData(int sockfd)
 		else  { 
 			printf("Server Exit...\n"); 
 			gpioTerminate();
+			free(stream_vals);
 			break; 
 		} 
-		
-		
 	} 
 } 
 

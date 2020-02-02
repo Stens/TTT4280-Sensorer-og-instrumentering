@@ -136,61 +136,12 @@ rawWaveInfo_t initADC(int *wid) {
     rawWaveInfo_t rwi = rawWaveInfo(*wid);
 
     return rwi;
-
 }
 
-void recordSamples(rawWaveInfo_t rwi, int wid,int num_samples, uint16_t *val)
-{
-
-    int botCB = rwi.botCB;
-    int topOOL = rwi.topOOL;
-    float cbs_per_reading = (float)rwi.numCB / (float)NUM_SAMPLES_IN_BUFFER;
-
-    float expected_sample_freq_khz = 1000.0/(1.0*REPEAT_MICROS);
-    int i;
-    int reading = 0;
-    int sample = 0;
 
 
-    while (sample < num_samples) {
-        // Get position along DMA control block buffer corresponding to the current output command.
-        int cb = rawWaveCB() - botCB;
-        int now_reading = (float) cb / cbs_per_reading;
+void readADC(rawWaveInfo_t rwi, int wid, int sockfd, int done, int num_samples, uint16_t* val){
 
-        while ((now_reading != reading) && (sample < num_samples)) {
-            // Read samples from DMA input buffer up until the current output command
-
-            // OOL are allocated from the top down. There are BITS bits for each ADC
-            // reading and NUM_SAMPLES_IN_BUFFER ADC readings. The readings will be
-            // stored in topOOL - 1 to topOOL - (BITS * NUM_SAMPLES_IN_BUFFER).
-            // Position of each reading's OOL are calculated relative to the wave's top
-            // OOL.
-            int reading_address = topOOL - ((reading % NUM_SAMPLES_IN_BUFFER)*BITS) - 1;
-
-            char rx[8];
-            getReading(ADCS, MISO, reading_address, 2, BITS, rx);
-
-            // Convert and save to output array
-            for (i=0; i < ADCS; i++) {
-                val[sample*ADCS+i] = (rx[i*2]<<4) + (rx[(i*2)+1]>>4);
-            }
-
-            ++sample;
-
-            if (++reading >= NUM_SAMPLES_IN_BUFFER) {
-                reading = 0;
-            }
-        }
-        usleep(1000);
-    }
-
-}
-
- 
-
-void readADC(rawWaveInfo_t rwi, int wid, int sockfd, int done, char* buff){
-
-    uint16_t *val = (uint16_t*)malloc(sizeof(uint16_t)*NUM_STREAM_SAMPLES*ADCS);
 
     int botCB = rwi.botCB;
     int topOOL = rwi.topOOL;
@@ -204,7 +155,7 @@ void readADC(rawWaveInfo_t rwi, int wid, int sockfd, int done, char* buff){
         gpioWaveTxSend(wid, PI_WAVE_MODE_REPEAT);
     }
 
-    while (sample < NUM_STREAM_SAMPLES) {
+    while (sample < num_samples) {
         // Get position along DMA control block buffer corresponding to the current output command.
         int cb = rawWaveCB() - botCB;
         int now_reading = (float) cb / cbs_per_reading;
@@ -235,7 +186,4 @@ void readADC(rawWaveInfo_t rwi, int wid, int sockfd, int done, char* buff){
         }
         usleep(1000);
     }
-
-    memcpy(buff, val, sizeof(uint16_t)*NUM_STREAM_SAMPLES*ADCS);
-    free(val);
 }

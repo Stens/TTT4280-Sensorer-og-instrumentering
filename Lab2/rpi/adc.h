@@ -64,7 +64,7 @@ void recordSamples(rawWaveInfo_t rwi, int wid, int num_samples, uint16_t *val);
 
 rawWaveInfo_t initADC();
 
-void readADC(rawWaveInfo_t rwi, int wid, int sockfd, int done, char* buff);
+void readADC(rawWaveInfo_t rwi, int wid, int sockfd, int done,int num_samples ,uint16_t* val);
 
 
 

@@ -64,9 +64,7 @@ void getReading(int adcs, int *MISO, int OOL, int bytes, int bits, char *buf)
    }
 }
 
-
-void readADC(int num_samples,uint16_t *val)
-{
+rawWaveInfo_t initADC(int *wid) {
 
     // SPI transfer settings, time resolution 1us (1MHz system clock is used)
     rawSPI_t rawSPI =
@@ -89,7 +87,7 @@ void readADC(int num_samples,uint16_t *val)
 
     // Initialize the pigpio library
     if (gpioInitialise() < 0) {
-       return 1;
+       return;
     }
 
     // Set the selected CLK, MOSI and SPI_SS pins as output pins
@@ -126,32 +124,33 @@ void readADC(int num_samples,uint16_t *val)
     gpioWaveAddGeneric(2, final);
 
     // Construct the wave from added data.
-    int wid = gpioWaveCreate();
-    if (wid < 0) {
+    *wid = gpioWaveCreate();
+    if (*wid < 0) {
         fprintf(stderr, "Can't create wave, buffer size %d too large?\n", NUM_SAMPLES_IN_BUFFER);
-        return 1;
+        return;
     }
 
     // Obtain addresses for the top and bottom control blocks (CB) in the DMA
     // output buffer. As the wave is being transmitted, the current CB will be
     // between botCB and topCB inclusive.
-    rawWaveInfo_t rwi = rawWaveInfo(wid);
+    rawWaveInfo_t rwi = rawWaveInfo(*wid);
+
+    return rwi;
+
+}
+
+void recordSamples(rawWaveInfo_t rwi, int wid,int num_samples, uint16_t *val)
+{
+
     int botCB = rwi.botCB;
     int topOOL = rwi.topOOL;
     float cbs_per_reading = (float)rwi.numCB / (float)NUM_SAMPLES_IN_BUFFER;
 
     float expected_sample_freq_khz = 1000.0/(1.0*REPEAT_MICROS);
-
-    printf("# Starting sampling: %ld samples (expected Tp = %d us, expected Fs = %.3f kHz).\n",
-    num_samples,REPEAT_MICROS,expected_sample_freq_khz);
-
-    // Start DMA engine and start sending ADC reading commands
-    gpioWaveTxSend(wid, PI_WAVE_MODE_REPEAT);
-
-    // Read back the samples
-    double start_time = time_time();
+    int i;
     int reading = 0;
     int sample = 0;
+
 
     while (sample < num_samples) {
         // Get position along DMA control block buffer corresponding to the current output command.
@@ -185,114 +184,32 @@ void readADC(int num_samples,uint16_t *val)
         usleep(1000);
     }
 
-    double end_time = time_time();
-
-    double nominal_period_us = 1.0*(end_time-start_time)/(1.0*num_samples)*1.0e06;
-    double nominal_sample_freq_khz = 1000.0/nominal_period_us;
-
-    printf("# %ld samples in %.6f seconds (actual T_p = %f us, nominal Fs = %.2f kHz).\n",
-        num_samples, end_time-start_time, nominal_period_us, nominal_sample_freq_khz);
-
-    double output_nominal_period_us = floor(nominal_period_us); //the clock is accurate only to us resolution
-
-    gpioTerminate();
 }
 
-void *streamADC(){
+ 
 
-    int num_samples = MAX/ADCS;
+void readADC(rawWaveInfo_t rwi, int wid, int sockfd, int done, char* buff){
 
-        // SPI transfer settings, time resolution 1us (1MHz system clock is used)
-    rawSPI_t rawSPI =
-    {
-       .clk     =  CLK,  // Defined before
-       .mosi    =  MOSI, // Defined before
-       .ss_pol  =  1,   // Slave select resting level.
-       .ss_us   =  1,   // Wait 1 micro after asserting slave select.
-       .clk_pol =  0,   // Clock resting level.
-       .clk_pha =  0,   // 0 sample on first edge, 1 sample on second edge.
-       .clk_us  =  1,   // 2 clocks needed per bit so 500 kbps.
-    };
+    uint16_t *val = (uint16_t*)malloc(sizeof(uint16_t)*NUM_STREAM_SAMPLES*ADCS);
 
-    // Change timer to use PWM clock instead of PCM clock. Default is PCM
-    // clock, but playing sound on the system (e.g. espeak at boot) will start
-    // sound systems that will take over the PCM timer and make adc_sampler.c
-    // sample at far lower samplerates than what we desire.
-    // Changing to PWM should fix this problem.
-    gpioCfgClock(5, 0, 0);
-
-    // Initialize the pigpio library
-    if (gpioInitialise() < 0) {
-       return 1;
-    }
-
-    // Set the selected CLK, MOSI and SPI_SS pins as output pins
-    gpioSetMode(rawSPI.clk,  PI_OUTPUT);
-    gpioSetMode(rawSPI.mosi, PI_OUTPUT);
-    gpioSetMode(SPI_SS,      PI_OUTPUT);
-
-    // Flush any old unused wave data.
-    gpioWaveAddNew();
-
-    // Construct bit-banged SPI reads. Each ADC reading is stored separatedly
-    // along a buffer of DMA commands (control blocks). When the DMA engine
-    // reaches the end of the buffer, it restarts on the start of the buffer
-    int offset = 0;
-    int i;
-    char buf[2];
-    for (i=0; i < NUM_SAMPLES_IN_BUFFER; i++) {
-        buf[0] = 0xC0; // Start bit, single ended, channel 0.
-
-        rawWaveAddSPI(&rawSPI, offset, SPI_SS, buf, 2, BX, B0, B0);
-        offset += REPEAT_MICROS;
-    }
-
-    // Force the same delay after the last command in the buffer
-    gpioPulse_t final[2];
-    final[0].gpioOn = 0;
-    final[0].gpioOff = 0;
-    final[0].usDelay = offset;
-
-    final[1].gpioOn = 0; // Need a dummy to force the final delay.
-    final[1].gpioOff = 0;
-    final[1].usDelay = 0;
-
-    gpioWaveAddGeneric(2, final);
-
-    // Construct the wave from added data.
-    int wid = gpioWaveCreate();
-    if (wid < 0) {
-        fprintf(stderr, "Can't create wave, buffer size %d too large?\n", NUM_SAMPLES_IN_BUFFER);
-        return 1;
-    }
-
-    // Obtain addresses for the top and bottom control blocks (CB) in the DMA
-    // output buffer. As the wave is being transmitted, the current CB will be
-    // between botCB and topCB inclusive.
-    rawWaveInfo_t rwi = rawWaveInfo(wid);
     int botCB = rwi.botCB;
     int topOOL = rwi.topOOL;
     float cbs_per_reading = (float)rwi.numCB / (float)NUM_SAMPLES_IN_BUFFER;
 
     float expected_sample_freq_khz = 1000.0/(1.0*REPEAT_MICROS);
-
-    printf("# Starting sampling: %ld samples (expected Tp = %d us, expected Fs = %.3f kHz).\n",
-    num_samples,REPEAT_MICROS,expected_sample_freq_khz);
-
-    // Start DMA engine and start sending ADC reading commands
-    gpioWaveTxSend(wid, PI_WAVE_MODE_REPEAT);
-
-    // Read back the samples
-    double start_time = time_time();
+    int i;
     int reading = 0;
     int sample = 0;
+    if (done==0) {
+        gpioWaveTxSend(wid, PI_WAVE_MODE_REPEAT);
+    }
 
-    while (sample < num_samples) {
+    while (sample < NUM_STREAM_SAMPLES) {
         // Get position along DMA control block buffer corresponding to the current output command.
         int cb = rawWaveCB() - botCB;
         int now_reading = (float) cb / cbs_per_reading;
 
-        while ((now_reading != reading) && (sample < num_samples)) {
+        while ((now_reading != reading) && (sample < NUM_STREAM_SAMPLES)) {
             // Read samples from DMA input buffer up until the current output command
 
             // OOL are allocated from the top down. There are BITS bits for each ADC
@@ -307,7 +224,7 @@ void *streamADC(){
 
             // Convert and save to output array
             for (i=0; i < ADCS; i++) {
-                streamVal[sample*ADCS+i] = (rx[i*2]<<4) + (rx[(i*2)+1]>>4);
+                val[sample*ADCS+i] = (rx[i*2]<<4) + (rx[(i*2)+1]>>4);
             }
 
             ++sample;
@@ -319,15 +236,6 @@ void *streamADC(){
         usleep(1000);
     }
 
-    double end_time = time_time();
-
-    double nominal_period_us = 1.0*(end_time-start_time)/(1.0*num_samples)*1.0e06;
-    double nominal_sample_freq_khz = 1000.0/nominal_period_us;
-
-    printf("# %ld samples in %.6f seconds (actual T_p = %f us, nominal Fs = %.2f kHz).\n",
-        num_samples, end_time-start_time, nominal_period_us, nominal_sample_freq_khz);
-
-    double output_nominal_period_us = floor(nominal_period_us); //the clock is accurate only to us resolution
-
-    gpioTerminate();
+    memcpy(buff, val, sizeof(uint16_t)*NUM_STREAM_SAMPLES*ADCS);
+    free(val);
 }

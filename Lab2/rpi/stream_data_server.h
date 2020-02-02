@@ -7,7 +7,6 @@
 #include <sys/types.h> 
 
 
-#define MAX 1024
 #define PORT 8080 
 #define SA struct sockaddr 
 #define HEADERSIZE 20

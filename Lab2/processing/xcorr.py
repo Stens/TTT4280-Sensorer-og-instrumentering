@@ -227,7 +227,7 @@ def circularPLot(theta):
     N = 4
     width = 2*np.pi/N
     for i in range(N):
-        ax.bar(i*width*0,3, width=width, bottom=0.0, alpha=0.3)
+        ax.bar(i*width,3, width=width, bottom=0.0, alpha=0.3)
     ax.bar(theta, 4, width=np.pi/18, bottom=0.0, alpha=0.7)
     circle1 = plt.Circle((0.0, 1.0), 0.2, transform=ax.transData._b, color="red", alpha=0.4)
     circle2 = plt.Circle((1.0, -1.0), 0.2, transform=ax.transData._b, color="red", alpha=0.4)
@@ -243,38 +243,39 @@ def circularPLot(theta):
 
 
 def approval():
-    N_files = 10
+    N_files = 11
     files = {}
 
     for i in range (N_files):
         files["file"+str(i+1)] = raspi_import("../measurements/adcData"+str(i+1)+".bin")
 
-    for i in range(3):
+    # for i in range(3):
 
-        plt.title("Filtered sound "+str(i+1))
-        plt.show()
+    #     plt.title("Filtered sound "+str(i+1))
+    #     plt.show()
         
+    plt.plot(files["file11"][10:,0])
+    plt.show()
 
-    for i in range(3):
-        data = files["file"+str(i+1)]
-        mic1 = signal.detrend(data[:,0], type="constant") 
-        mic2 = signal.detrend(data[:,1], type="constant")
-        mic3 = signal.detrend(data[:,2], type="constant")
-
-
-        # Crosscorrelation
-        xcorr21 = np.correlate(mic1, mic2, "full")
-        # xcorr31 = np.correlate(mic1, mic3, "full")
-        # xcorr32 = np.correlate(mic2, mic3, "full")
-        plt.plot(xcorr21)dist
-        plt.title("Cross corrolation "+str(i+1))
-        plt.xlabel("Lag")
-        plt.show()
+    # for i in range(3):
+    #     data = files["file"+str(i+1)]
+    #     mic1 = signal.detrend(data[:,0], type="constant") 
+    #     mic2 = signal.detrend(data[:,1], type="constant")
+    #     mic3 = signal.detrend(data[:,2], type="constant")
 
 
-    for i in range(N_files):
-        circularPLot(calcAngleEfficient(files["file"+str(i+1)], 32000, 6.3, 343, sampleFactor=1))
+    #     # Crosscorrelation
+    #     xcorr21 = np.correlate(mic1, mic2, "full")
+    #     # xcorr31 = np.correlate(mic1, mic3, "full")
+    #     # xcorr32 = np.correlate(mic2, mic3, "full")
+    #     plt.plot(xcorr21)
+    #     plt.title("Cross corrolation "+str(i+1))
+    #     plt.xlabel("Lag")
+    #     plt.show()
 
+
+    # for i in range(N_files):
+    #     circularPLot(calcAngleEfficient(files["file"+str(i+1)], 33000, 6.3, 343, sampleFactor=1))
 
 
 

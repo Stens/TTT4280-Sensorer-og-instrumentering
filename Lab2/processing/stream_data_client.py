@@ -3,16 +3,57 @@ import numpy as np
 import sys
 import time
 import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 import copy
+from threading import Thread
+import xcorr
 
 HOST = '192.168.43.15'  # The rpi's hostname or IP address
 PORT = 8080        # The port used by the server
 MAX = 300
 ARRAY_SIZE = int(MAX/2)
 ADCS = 5 # Hardcoded on the pi
+np_data_arr = np.zeros(30*MAX,dtype=np.uint16)
+fig = plt.figure()
+ax1 = fig.add_subplot(111, polar=True)
+
+
+
+
+
+def show_sine(i):
+    ax1.clear()
+    dat = np_data_arr.reshape((-1, 5))
+    org_data = dat[:,0]
+    ax1.plot(org_data)
+
+def show_direction(i):
+    ax1.clear()
+    dat = np_data_arr.reshape((-1, 5))
+    # org_data = dat[:,0]
+    theta = xcorr.calcAngle(dat)
+    N = 4
+    width = 2*np.pi/N
+    for i in range(N):
+        ax1.bar(i*width,3, width=width, bottom=0.0, alpha=0.3)
+    ax1.bar(theta, 4, width=np.pi/18, bottom=0.0, alpha=0.7)
+    circle1 = plt.Circle((0.0, 1.0), 0.2, transform=ax1.transData._b, color="red", alpha=0.4)
+    circle2 = plt.Circle((1.0, -1.0), 0.2, transform=ax1.transData._b, color="red", alpha=0.4)
+    circle3 = plt.Circle((-1.0, -1.0), 0.2, transform=ax1.transData._b, color="red", alpha=0.4)
+    ax1.tick_params(
+    axis='y',          
+    which='both',      
+    bottom=False,
+    top=False,         
+    labelbottom=False) 
+
+    ax1.add_artist(circle1)
+    ax1.add_artist(circle2)
+    ax1.add_artist(circle3)
+
 
 def stream_measurements():
-    np_data_arr = np.zeros(10*MAX,dtype=np.uint16)
+    # np_data_arr = np.zeros(10*MAX,dtype=np.uint16)
     i = 0
     send_string = "STREAM"
     
@@ -29,15 +70,18 @@ def stream_measurements():
                 # timedomain_x = np.arange(0,0.033456,0.00003352304)
                 # timedomain_y = [org_data[j]*0.00080566406 for j in range(ARRAY_SIZE)]
                 # timedomain_y = timedomain_y[1:]
-                i += 1
-                if i > 100:
-                    dat = np_data_arr.reshape((-1, 5))
-                    org_data = dat[:,0]
-                    plt.plot(org_data)
-                    plt.show()
-                    break
+                # i += 1
+                # if i > 100:
+                #     dat = np_data_arr.reshape((-1, 5))
+                #     org_data = dat[:,0]
+                #     plt.plot(org_data)
+                #     plt.show()
+                #     break
             except Exception as e:
-                print("noe gikk galt" +str(e))    
+                print("noe gikk galt" +str(e))  
+
+
+  
 
 
 # Helper function
@@ -68,4 +112,9 @@ def do_stuff(arr):
     # plt.show()
 
 
-stream_measurements()
+stream = Thread(target = stream_measurements, args = (),)
+stream.start()
+
+ani = animation.FuncAnimation(fig, show_direction, interval=50)
+plt.yticks([], [])
+plt.show()

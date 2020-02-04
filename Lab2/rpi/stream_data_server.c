@@ -6,6 +6,7 @@
 #include <sys/socket.h> 
 #include <sys/types.h> 
 #include <pthread.h>
+#include <unistd.h>
 #include "adc.h"
 #include "stream_data_server.h"
 
@@ -16,99 +17,62 @@ void sendData(int sockfd)
     int num_samples;
     char *pEnd;
 	int data_chunks;	
+	int wid;
+	int done = 0;
+	rawWaveInfo_t rwi = initADC(&wid);
+    uint16_t *stream_vals = (uint16_t*)malloc(sizeof(uint16_t)*NUM_STREAM_SAMPLES*ADCS);
+
 
 	while (1) { 
 		bzero(buff, MAX); 
 
 		// read the message from client and copy it in buffer 
 		read(sockfd, buff, sizeof(buff)); 
-		// print buffer which contains the client contents 
-		printf("From client: %s\t To client : ", buff); 
-        if (strncmp("R", buff, 1)) {
-			memmove (buff, buff+2, strlen (buff));
-
+        if (!strncmp("REC", buff, 3)) { // Not tested fully
+			
+			strncpy(buff, buff+4, 4);
+			memset(buff+4,'\0',4);
             num_samples = strtol(buff,&pEnd,10);
-			uint16_t val = (uint16_t*)malloc(sizeof(uint16_t)*num_samples*ADCS);
+			uint16_t *read_val = (uint16_t*)malloc(sizeof(uint16_t)*num_samples*ADCS);
 
-            readADC(num_samples, &val);
+			readADC(rwi, wid, sockfd, done, num_samples ,stream_vals);
 			
 			bzero(buff, MAX); 
 			data_chunks = (ADCS*num_samples + (MAX / 2)) / MAX;
+			printf("%d data chunks\n", data_chunks);
 
 			// and send vals to client 
-			for (size_t i = 0; i < data_chunks; i++)
+			for (size_t i = 0; i <= data_chunks; i++)
 			{
-				memcpy(buff, val+i, MAX);
-				write(sockfd, buff, MAX); 
+				write(buff, read_val+(i*sizeof(uint16_t)*NUM_STREAM_SAMPLES*ADCS), 
+				sizeof(uint16_t)*NUM_STREAM_SAMPLES*ADCS);	 
 			}
-			
-			free(val);
-
+			free(read_val);
+			done = 1;
         }
-		// if msg contains "Exit" then server exit and chat ended. 
-		else if (strncmp("exit", buff, 4) == 0) { 
-			printf("Server Exit...\n"); 
-			break; 
-		} 
-		else
+
+		else if (!strncmp("STREAM", buff, 6)) 
 		{
-			strcpy(buff, "Error: invalid request");
-			write(sockfd, buff, sizeof(buff)); 
+
+			// and send vals to client 
+			readADC(rwi, wid, sockfd, done, NUM_STREAM_SAMPLES ,stream_vals);
+			write(sockfd, stream_vals, sizeof(uint16_t)*NUM_STREAM_SAMPLES*ADCS); // = MAX = 300 ??
+			done = 1;
+
 		}
 		
+		// if msg contains "Exit" then server exit and chat ended. 
+		else  { 
+			printf("Server Exit...\n"); 
+			gpioTerminate();
+			free(stream_vals);
+			break; 
+		} 
 	} 
 } 
 
-void streamData(int sockfd) { // Have to use threads
-  	char buff[MAX]; 
-    char * pEnd;
-	int totSamples = MAX/ADCS;
-	pthread_t thread; 
 
-	while (1) { 
-		bzero(buff, MAX); 
-
-		// read the message from client and copy it in buffer 
-		uint16_t *val = (uint16_t*)malloc(sizeof(uint16_t)*MAX);
-		read(sockfd, buff, sizeof(buff)); 
-		// print buffer which contains the client contents 
-		printf("From client: %s\t To client : ", buff); 
-        if (strncmp("S", buff, 1)) {
-            // streamADC(); // source of segmentation error?
-			pthread_create(&thread, NULL, streamADC, NULL);
-			memmove (buff, buff+2, strlen (buff));
-
-			// Need to use threads here
-
-
-			
-			bzero(buff, MAX); 
-			
-
-    		pthread_join(thread, NULL);
-			// and send vals to client 
-			
-			memcpy(buff, streamVal, MAX);
-			write(sockfd, buff, MAX); 
-			
-
-        }
-		// if msg contains "Exit" then server exit and chat ended. 
-		else if (strncmp("exit", buff, 4) == 0) { 
-			printf("Server Exit...\n"); 
-			break; 
-		} 
-		else
-		{
-			strcpy(buff, "Error: invalid request");
-			write(sockfd, buff, sizeof(buff)); 
-		}
-		
-	} 
-
-}
-
-// Driver function 
+// main init function. Starts the server
 int main() 
 { 
 	int sockfd, connfd, len; 
@@ -155,9 +119,9 @@ int main()
 	else
 		printf("server acccept the client...\n"); 
 
-	// Function for chatting between client and server 
+	// Function for sending data
 	sendData(connfd); 
 
-	// After chatting close the socket 
+	// Transaction complete, close the socket
 	close(sockfd); 
 } 

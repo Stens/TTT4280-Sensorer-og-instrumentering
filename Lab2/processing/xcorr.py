@@ -41,16 +41,17 @@ def raspi_import(path, channels=5):
         sample_period = np.fromfile(fid, count=1, dtype=float)[0]
         data = np.fromfile(fid, dtype=np.uint16)
         data = data.reshape((-1, channels))
-    return data # Return only the data
+    return sample_period,data # Return only the data
 
 
 def preProc(data, Ts, upSampleFactor=1, filterorder=0):
-    length = len(data[:,0])
+    length = len(data[10:,0])
     mic = np.zeros((length,3))
-    mic = signal.detrend(data[:,:3], axis=0, type="constant")
+    adcs = [3,1,2]
+    mic = signal.detrend(data[10:,adcs], axis=0, type="constant")
     if(filterorder > 0):
         for i in range(3):
-            mic[:,i] = bandpass.butterBandpassFilter(mic,Ts,i,filterorder)
+            mic[:,i] = bandpass.butterBandPassFilter(mic,Ts,i,filterorder)
     
     if(upSampleFactor != 1):
         mic = signal.resample(mic, upSampleFactor*length, axis=0)
@@ -79,7 +80,7 @@ def lagToAngle(maxLag):
 def calcAngle(data):
     
     # Seperate the three mics and remove DC
-    mic1 = signal.detrend(data[:,0], type="constant") 
+    mic1 = signal.detrend(data[:,3], type="constant") 
     mic2 = signal.detrend(data[:,1], type="constant")
     mic3 = signal.detrend(data[:,2], type="constant")
 
@@ -112,7 +113,7 @@ def calcAngle(data):
 def calcAngleWithPlot(data):
     
     # Seperate the three mics and remove DC
-    mic1 = signal.detrend(data[:,0], type="constant") 
+    mic1 = signal.detrend(data[:,3], type="constant") 
     mic2 = signal.detrend(data[:,1], type="constant")
     mic3 = signal.detrend(data[:,2], type="constant")
 
@@ -174,7 +175,7 @@ def myDot(x,y,l):
 
 def calcAngleEfficient(data, Fs, dist, c, sampleFactor=1,filterorder=0):
     
-    mic = preProc(data, 1e6/Fs,sampleFactor, filterorder)
+    mic = preProc(data, 1/Fs,sampleFactor, filterorder)
     
     # Crosscorrelation
     lmax = int(np.ceil(1.5*Fs*sampleFactor*dist/c))
@@ -191,7 +192,7 @@ def calcAngleEfficient(data, Fs, dist, c, sampleFactor=1,filterorder=0):
 
 def calcAngleWithPlotEfficient(data, Fs, dist, c, sampleFactor=1,filterorder=0):
     
-    mic = preProc(data, 1e6/Fs, sampleFactor, filterorder)
+    mic = preProc(data, 1/Fs, sampleFactor, filterorder)
     
     # Crosscorrelation
     lmax = int(np.ceil(Fs*sampleFactor*dist/c))
@@ -266,7 +267,7 @@ def approval():
         xcorr21 = np.correlate(mic1, mic2, "full")
         # xcorr31 = np.correlate(mic1, mic3, "full")
         # xcorr32 = np.correlate(mic2, mic3, "full")
-        plt.plot(xcorr21)dist
+        plt.plot(xcorr21)
         plt.title("Cross corrolation "+str(i+1))
         plt.xlabel("Lag")
         plt.show()

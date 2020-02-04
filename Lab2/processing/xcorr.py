@@ -16,17 +16,22 @@ data is an array with dimensions NSAMPLES x NCHANNELS, only 3 first channels use
 from scipy import signal
 import numpy as np
 import matplotlib.pyplot as plt
+import bandpass
 
 
-def preProc(data, upSampleFactor=1):
+def preProc(data, Ts, upSampleFactor=1, filterorder=0):
     length = len(data[:,0])
     mic = np.zeros((length,3))
     mic = signal.detrend(data[:,:3], axis=0, type="constant")
+    if(filterorder > 0):
+        for i in range(3):
+            mic[:,i] = bandpass.butterBandpassFilter(mic,Ts,i,filterorder)
     
     if(upSampleFactor != 1):
         mic = signal.resample(mic, upSampleFactor*length, axis=0)
     
     # Might also add filter here
+
     
     return mic
 
@@ -35,16 +40,16 @@ def lagToAngle(maxLag):
     b = xish < 0
     a = maxLag[0] - maxLag[1] - 2*maxLag[2]
     if(a != 0):
-        theta = np.arctan(np.sqrt(3) * ((maxLag[0]+ maxLag[2])/a)) + b*np.pi
+        theta = np.arctan(np.sqrt(3) * ((maxLag[0]+ maxLag[1])/a)) #+ b*np.pi
     else:
         theta = 0
     # Should be more elegant
-    while(theta > np.pi/2):
+    """while(theta > np.pi/2):
         theta -= np.pi/2
     while(theta < -np.pi/2):
-        theta += np.pi/2
+        theta += np.pi/2"""
 
-    return -theta
+    return theta
 
 def calcAngle(data):
     
@@ -142,9 +147,9 @@ def myDot(x,y,l):
 
 
 
-def calcAngleEfficient(data, Fs, dist, c, sampleFactor=1):
+def calcAngleEfficient(data, Fs, dist, c, sampleFactor=1,filterorder=0):
     
-    mic = preProc(data, sampleFactor)
+    mic = preProc(data, 1e6/Fs,sampleFactor, filterorder)
     
     # Crosscorrelation
     lmax = int(np.ceil(1.5*Fs*sampleFactor*dist/c))
@@ -159,9 +164,9 @@ def calcAngleEfficient(data, Fs, dist, c, sampleFactor=1):
 
     return lagToAngle(maxLag)
 
-def calcAngleWithPlotEfficient(data, Fs, dist, c, sampleFactor=1):
+def calcAngleWithPlotEfficient(data, Fs, dist, c, sampleFactor=1,filterorder=0):
     
-    mic = preProc(data, sampleFactor)
+    mic = preProc(data, 1e6/Fs, sampleFactor, filterorder)
     
     # Crosscorrelation
     lmax = int(np.ceil(Fs*sampleFactor*dist/c))

@@ -17,10 +17,10 @@ import xcorr
 N = 100 # Num angles
 c = 343 # Speed of Sound
 d = 0.07 # Distance between mics
-nF = 50
+nF = 5
 F = np.linspace(20, 20000, num=nF) # Base frequency of signal
 Fs = 31250 # Sample frequency
-length = 300 # Num samples
+length = 100 # Num samples
 M = 1 # Num harmonics in signal
 L = 1 # Number of repetitions with different noise
 mu = 0 # Mean of gaussian noise
@@ -62,12 +62,12 @@ for f in range(nF):
         data[:,2] = sig[maxlag+lag3:len(sig)-(maxlag-lag3)]
         for j in range(3):
             data[:,j] += np.random.normal(mu, sigma, length-2*maxlag)
-        """if(i==int(2*N/3)):
+        if(i==int(2*N/3)):
             m = np.linspace(0,length-2*maxlag-1,num=length-2*maxlag)
             plt.plot(m,data[:,0],m,data[:,1],m,data[:,2])
             plt.show()
             xcorr.calcAngleWithPlotEfficient(data,Fs,d,c)
-            xcorr.calcAngleWithPlot(data)"""
+            xcorr.calcAngleWithPlot(data)
         
         
         thetaestimates[i] = xcorr.calcAngle(data)

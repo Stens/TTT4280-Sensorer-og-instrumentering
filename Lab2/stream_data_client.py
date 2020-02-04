@@ -40,7 +40,7 @@ def stream_measurements():
                 print("noe gikk galt" +str(e))    
 
 
-
+# Helper function
 def shift(arr, num, fill_value=np.nan):
     if num > 0:
         arr[:num] = fill_value

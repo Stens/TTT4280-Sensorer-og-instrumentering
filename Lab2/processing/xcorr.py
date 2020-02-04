@@ -18,6 +18,31 @@ import numpy as np
 import matplotlib.pyplot as plt
 import bandpass
 
+def raspi_import(path, channels=5):
+    """
+    Import data produced using adc_sampler.c.
+
+    Parameters
+    ----------
+    path: str
+        Path to file.
+    channels: int, optional
+        Number of channels in file.
+
+    Returns
+    -------
+    sample_period: float
+        Sample period
+    data: ndarray, uint16
+        Sampled data for each channel, in dimensions NUM_SAMPLES x NUM_CHANNELS.
+    """
+
+    with open(path, 'r') as fid:
+        sample_period = np.fromfile(fid, count=1, dtype=float)[0]
+        data = np.fromfile(fid, dtype=np.uint16)
+        data = data.reshape((-1, channels))
+    return data # Return only the data
+
 
 def preProc(data, Ts, upSampleFactor=1, filterorder=0):
     length = len(data[:,0])
@@ -193,3 +218,78 @@ def calcAngleWithPlotEfficient(data, Fs, dist, c, sampleFactor=1,filterorder=0):
     print(maxLag[2])
 
     return lagToAngle(maxLag)
+
+
+def circularPLot(theta):
+    fig = plt.figure()
+    ax = fig.add_subplot(111, polar=True)
+    # ax.plot(np.linspace(0, 2*np.pi, 100), np.ones(100)*3, color='r', linestyle='-')
+    N = 4
+    width = 2*np.pi/N
+    for i in range(N):
+        ax.bar(i*width*0,3, width=width, bottom=0.0, alpha=0.3)
+    ax.bar(theta, 4, width=np.pi/18, bottom=0.0, alpha=0.7)
+    circle1 = plt.Circle((0.0, 1.0), 0.2, transform=ax.transData._b, color="red", alpha=0.4)
+    circle2 = plt.Circle((1.0, -1.0), 0.2, transform=ax.transData._b, color="red", alpha=0.4)
+    circle3 = plt.Circle((-1.0, -1.0), 0.2, transform=ax.transData._b, color="red", alpha=0.4)
+
+    ax.add_artist(circle1)
+    ax.add_artist(circle2)
+    ax.add_artist(circle3)
+    # ax.set_theta_zero_location("N")
+
+    plt.yticks([], [])
+    plt.show()
+
+
+def approval():
+    N_files = 10
+    files = {}
+
+    for i in range (N_files):
+        files["file"+str(i+1)] = raspi_import("../measurements/adcData"+str(i+1)+".bin")
+
+    for i in range(3):
+
+        plt.title("Filtered sound "+str(i+1))
+        plt.show()
+        
+
+    for i in range(3):
+        data = files["file"+str(i+1)]
+        mic1 = signal.detrend(data[:,0], type="constant") 
+        mic2 = signal.detrend(data[:,1], type="constant")
+        mic3 = signal.detrend(data[:,2], type="constant")
+
+
+        # Crosscorrelation
+        xcorr21 = np.correlate(mic1, mic2, "full")
+        # xcorr31 = np.correlate(mic1, mic3, "full")
+        # xcorr32 = np.correlate(mic2, mic3, "full")
+        plt.plot(xcorr21)dist
+        plt.title("Cross corrolation "+str(i+1))
+        plt.xlabel("Lag")
+        plt.show()
+
+
+    for i in range(N_files):
+        circularPLot(calcAngleEfficient(files["file"+str(i+1)], 32000, 6.3, 343, sampleFactor=1))
+
+
+
+
+
+
+# After talking with Peter Uran, and Peter Svensson we have decided on the following requirements that must be fulfilled for passing Lab 2, the acoustics lab.
+
+# 1) We need to see plots of three time signals of the sampled sounds from the microphone which have been filtered of some sorts.
+
+# 2) We need to see three cross-correlation-plots zoomed in on zero, so we can see the lag that is indicated by the highest peak.
+
+# 3) We need to see ten estimations of angles, evenly distributed over the four quadrants. Preferably in a circle plot which shows where on the circle the angles are.
+
+# 4) Finally, give a table with three coloumns, and ten rows where each row corresponds to one of the estimated angles from 3). Each row should have these numbers: Estimated angle, actual angle and deviation (avvik) of the angle-estimate from the true angle.
+
+# import matplotlib.animation as animation
+# ani = animation.FuncAnimation(fig, animate, fargs=(xs, ys), interval=1000)
+# plt.show()

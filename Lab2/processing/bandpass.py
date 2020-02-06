@@ -78,15 +78,15 @@ def butterBandPassFilter(data,Ts,channel,order=2):
     b,a = signal.butter(order,low,btype='high',output='ba')
     y = signal.lfilter(b,a,x)
     f = abs(detectDominantFreq(y,Ts))
-    print(f)
+    #print(f)
     highfc = (f + nyq)/2
     high = highfc/nyq
     b,a = signal.butter(order,high,btype='low',output='ba')
     z = signal.lfilter(b,a,y)
-    plt.plot(x)
+    """plt.plot(x)
     plt.plot(z*np.linalg.norm(x)/np.linalg.norm(z))
     plt.legend(("pure","filtered"))
-    plt.show()
+    plt.show()"""
     
     return z
     

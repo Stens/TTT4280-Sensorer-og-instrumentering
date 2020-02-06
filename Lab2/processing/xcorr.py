@@ -66,15 +66,13 @@ def lagToAngle(maxLag):
     b = xish < 0
     a = maxLag[0] - maxLag[1] - 2*maxLag[2]
     if(a != 0):
-        theta = np.arctan(np.sqrt(3) * ((maxLag[0]+ maxLag[1])/a)) #+ b*np.pi
+        theta = -np.arctan(np.sqrt(3) * ((maxLag[0]+ maxLag[1])/a)) - b*np.pi
     else:
         theta = 0
-    # Should be more elegant
-    """while(theta > np.pi/2):
-        theta -= np.pi/2
-    while(theta < -np.pi/2):
-        theta += np.pi/2"""
-
+    if(theta < -np.pi):
+        theta += 2*np.pi
+    elif(theta > np.pi):
+        theta -= 2*np.pi
     return theta
 
 def calcAngle(data):

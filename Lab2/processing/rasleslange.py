@@ -17,17 +17,17 @@ c = 343
 Ts, data = xcorr.raspi_import("adcData.bin")
 
 
-thetafull = xcorr.calcAngleWithPlot(data)
+#thetafull = xcorr.calcAngleWithPlot(data)
 #thetaeff = xcorr.calcAngleWithPlotEfficient(data,1e6/Ts,d,c)
-thetaeff2 = xcorr.calcAngleWithPlotEfficient(data,1e6/Ts,d,c,2)
+#thetaeff2 = -xcorr.calcAngleWithPlotEfficient(data,1e6/Ts,d,c,2)
 #thetaefffilter = xcorr.calcAngleWithPlotEfficient(data,1e6/Ts,d,c,1,4)
-thetaefffilter2 = xcorr.calcAngleWithPlotEfficient(data,1e6/Ts,d,c,2,5)
+thetaefffilter2 = xcorr.calcAngleWithPlotEfficient(data,1e6/Ts,d,c,3,3)
 
 
 
-print("Full xcorr gives {} degrees".format(thetafull*180/np.pi))
+#print("Full xcorr gives {} degrees".format(thetafull*180/np.pi))
 #print("Small boi xcorr gives {} degrees".format(thetaeff*180/np.pi))
-print("Small boi xcorr with 2xupsampling gives {} degrees".format(thetaeff2*180/np.pi))
+#print("Small boi xcorr with 2xupsampling gives {} degrees".format(thetaeff2*180/np.pi))
 #print("Small boi filtered xcorr gives {} degrees".format(thetaefffilter*180/np.pi))
 print("Small boi filtered xcorr with 2xupsampling gives {} degrees".format(thetaefffilter2*180/np.pi))
 

@@ -227,8 +227,8 @@ def circularPLot(theta):
     N = 4
     width = 2*np.pi/N
     for i in range(N):
-        ax.bar(i*width,3, width=width, bottom=0.0, alpha=0.3)
-    ax.bar(theta, 4, width=np.pi/18, bottom=0.0, alpha=0.7)
+        ax.bar((i*width)+np.pi/2,2, width=width, bottom=1.5, alpha=0.3)
+    ax.bar(theta, 4, width=np.pi/36, bottom=0.0, alpha=0.7)
     circle1 = plt.Circle((0.0, 1.0), 0.2, transform=ax.transData._b, color="red", alpha=0.4)
     circle2 = plt.Circle((1.0, -1.0), 0.2, transform=ax.transData._b, color="red", alpha=0.4)
     circle3 = plt.Circle((-1.0, -1.0), 0.2, transform=ax.transData._b, color="red", alpha=0.4)
@@ -241,7 +241,7 @@ def circularPLot(theta):
     plt.yticks([], [])
     plt.show()
 
-
+circularPLot(1)
 def approval():
     N_files = 11
     files = {}

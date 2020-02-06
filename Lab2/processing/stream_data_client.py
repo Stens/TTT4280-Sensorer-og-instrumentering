@@ -35,7 +35,7 @@ def show_direction(i):
     N = 4
     width = 2*np.pi/N
     for i in range(N):
-        ax1.bar(i*width,3, width=width, bottom=0.0, alpha=0.3)
+        ax1.bar(i*width,3, width=width, bottom=1.0 alpha=0.3)
     ax1.bar(theta, 4, width=np.pi/18, bottom=0.0, alpha=0.7)
     circle1 = plt.Circle((0.0, 1.0), 0.2, transform=ax1.transData._b, color="red", alpha=0.4)
     circle2 = plt.Circle((1.0, -1.0), 0.2, transform=ax1.transData._b, color="red", alpha=0.4)

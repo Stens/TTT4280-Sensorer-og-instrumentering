@@ -31,15 +31,17 @@ def show_direction(i):
     ax1.clear()
     dat = np_data_arr.reshape((-1, 5))
     # org_data = dat[:,0]
-    theta = xcorr.calcAngle(dat)
+    theta = xcorr.calcAngleEfficient(dat,33000,0.07,343,filterorder=1,sampleFactor=1)
+    # theta = 1
     N = 4
     width = 2*np.pi/N
     for i in range(N):
-        ax1.bar(i*width,3, width=width, bottom=1.0 alpha=0.3)
+        ax1.bar(i*width,3, width=width, bottom=1.0, alpha=0.3)
     ax1.bar(theta, 4, width=np.pi/18, bottom=0.0, alpha=0.7)
     circle1 = plt.Circle((0.0, 1.0), 0.2, transform=ax1.transData._b, color="red", alpha=0.4)
     circle2 = plt.Circle((1.0, -1.0), 0.2, transform=ax1.transData._b, color="red", alpha=0.4)
     circle3 = plt.Circle((-1.0, -1.0), 0.2, transform=ax1.transData._b, color="red", alpha=0.4)
+    print(np.round(theta*180/np.pi,0))
     ax1.tick_params(
     axis='y',          
     which='both',      
@@ -115,6 +117,6 @@ def do_stuff(arr):
 stream = Thread(target = stream_measurements, args = (),)
 stream.start()
 
-ani = animation.FuncAnimation(fig, show_direction, interval=50)
+ani = animation.FuncAnimation(fig, show_direction, interval=100)
 plt.yticks([], [])
 plt.show()

@@ -39,7 +39,6 @@ thetaestimates5 = np.zeros(N)
  
 ns=np.linspace(0,N-1,num=N)
 
-#mse = np.zeros((nF,3))
 maxlag = int(np.ceil(d/np.sqrt(3)/c*Fs))
 
 n = np.linspace(0,(length-1),num=length)
@@ -77,18 +76,6 @@ for i in range(N):
         plt.show()
     
     thetaestimates[i] = xcorr.calcAngleEfficient(data, Fs,d,c,samplingFactor,order)
-    #thetaestimates1[i] = -xcorr.calcAngleEfficient(data, Fs, d, c, 2,2)
-    #thetaestimates2[i] = -xcorr.calcAngleEfficient(data, Fs, d, c, 2,4)
-
-
-"""
-plt.plot(sigmas,mse)
-plt.title("MSE for different noise std, order 3, 2x upsampling")
-plt.xlabel("Standard deviation sigma")
-plt.ylabel("MSE")
-plt.savefig("SimulateNoise.jpg",quality=95,dpi=1500)
-plt.show()"""
-
 
 
 

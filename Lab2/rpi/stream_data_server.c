@@ -53,12 +53,10 @@ void sendData(int sockfd)
 
 		else if (!strncmp("STREAM", buff, 6)) 
 		{
-
 			// and send vals to client 
 			readADC(rwi, wid, sockfd, done, NUM_STREAM_SAMPLES ,stream_vals);
 			write(sockfd, stream_vals, sizeof(uint16_t)*NUM_STREAM_SAMPLES*ADCS); // = MAX = 300 ??
 			done = 1;
-
 		}
 		
 		// if msg contains "Exit" then server exit and chat ended. 

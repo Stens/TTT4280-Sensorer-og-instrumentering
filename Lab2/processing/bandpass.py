@@ -19,8 +19,6 @@ def detectDominantFreq(y,Ts):
     nyq = 0.5/Ts
     peakFreq = (np.argmax(abs(w[int(M/2):]))-int(M/2))*nyq/M
     return peakFreq
-    
-
 
 
 def butterBandPassFilter(data,Ts,channel,order=2):
@@ -32,7 +30,6 @@ def butterBandPassFilter(data,Ts,channel,order=2):
     b,a = signal.butter(order,low,btype='high',output='ba')
     y = signal.lfilter(b,a,x)
     f = abs(detectDominantFreq(y,Ts))
-    #print(f)
     highfc = (f + nyq)/2
     high = highfc/nyq
     b,a = signal.butter(order,high,btype='low',output='ba')

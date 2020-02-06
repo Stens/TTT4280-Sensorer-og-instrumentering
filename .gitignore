@@ -1,2 +1,5 @@
-*.bin
 adc_sampler_server
+__pycache__/
+*.pyc
+*.bin
+*.zip

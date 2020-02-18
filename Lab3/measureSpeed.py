@@ -13,6 +13,7 @@ import import_data
 
 def measureSpeed(data,Fs,realChannel,imagChannel,f0=24.13e9):
     fft,freqs = complexFFT(data,Fs,realChannel,imagChannel)
+    fft, freqs = bandPass(fft, freqs)
     peakFreq = findPeak(fft,freqs)
     speed = dopplerFormula(peakFreq)
     return speed
@@ -48,6 +49,14 @@ def dopplerFormula(fd, f0=24.13e9):
     v=c*fd/2/f0
     return v
 
+def bandPass(fft,freqs, lowF=3, highF=500):
+    compLow = np.abs(freqs - lowF)
+    compHigh = np.abs(freqs - highF)
+    lowIdx = np.argmin(compLow)
+    highIdx = np.argmin(compHigh)
+    fft = fft[lowIdx:highIdx]
+    freqs = freqs[lowIdx:highIdx]
+    return fft, freqs
 
 
 def test(path,realChannel,imagChannel, Nmeasurments):
@@ -56,6 +65,7 @@ def test(path,realChannel,imagChannel, Nmeasurments):
     
     if(Nmeasurments ==1):        
         fft,freqs = complexFFT(data,Fs,realChannel,imagChannel)
+        fft, freqs = bandPass(fft,freqs)
         plt.plot(freqs,np.abs(fft))
         plt.title("DFT")
         plt.xlabel("Hz")
@@ -63,13 +73,15 @@ def test(path,realChannel,imagChannel, Nmeasurments):
         peak = findPeak(fft,freqs)
         return dopplerFormula(peak), peak
     
+    
     datas = np.split(data, Nmeasurments)
     speeds = np.zeros(Nmeasurments)
     for i in range(Nmeasurments):
-        speeds[i] = -measureSpeed(datas[i], Fs, realChannel, imagChannel)
+        speeds[i] = measureSpeed(datas[i], Fs, realChannel, imagChannel)
         """fft,freqs = complexFFT(datas[i],Fs,realChannel,imagChannel)
+        fft, freqs = bandPass(fft,freqs)
         N = len(fft)
-        plt.plot(freqs[int(15*N/32):int(17*N/32)],np.abs(fft[int(15*N/32):int(17*N/32)]))
+        plt.plot(freqs,np.abs(fft))
         plt.show()"""
     
   
@@ -81,7 +93,7 @@ def test(path,realChannel,imagChannel, Nmeasurments):
     return speed
     
 
-speed = test("adcDataStoy.bin", 3,4, 50)
+speed = test("adcData4.bin", 3,4, 50)
 print("SPEED = {}".format(speed))
     
     

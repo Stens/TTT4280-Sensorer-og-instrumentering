@@ -47,9 +47,13 @@ def preProcessing(data, Ts, upSampleFactor=1, filterorder=0):
             mic[:,i] = bandpass.butterBandPassFilter(mic,Ts,i,filterorder)
     
     if(upSampleFactor != 1):
-        mic = signal.resample(mic, upSampleFactor*length, axis=0)
-    
-    # Might also add filter here
+        
+        
+        
+        
+        
+        
+        lso add filter here
 
     
     return mic

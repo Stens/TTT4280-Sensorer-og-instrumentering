@@ -24,7 +24,7 @@ length = 500 # Num samples
 M = 10 # Num harmonics in signal
 L = 1 # Number of repetitions with different noise
 mu = 0 # Mean of gaussian noise
-sigma = 0.0001 # Std of gaussian noise
+sigma = 1 # Std of gaussian noise
 samplingFactor = 2 # Seems to be good trade off between resolution and cost
 order = 3 # Likely best filter order
 

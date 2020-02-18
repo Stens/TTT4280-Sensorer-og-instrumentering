@@ -10,7 +10,6 @@ Detect dominant frequency and band pass filter around that freq
 
 import numpy as np
 from scipy import signal
-import matplotlib.pyplot as plt
 
 
 def detectDominantFreq(y,Ts):

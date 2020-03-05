@@ -69,7 +69,7 @@ def extract_vals(filename, output_filename):
 def find_heartbeat(data):
     red_channel = data[:,2]
     red_channel = signal.detrend(red_channel, type="constant")
-    red_channel = red_channel[29:] - moving_average(red_channel, 30)
+    red_channel = red_channel[4:] - moving_average(red_channel, 5)
 
     freqs = np.fft.fftfreq(len(red_channel),1/40)
     spectrum = np.fft.fft(red_channel, len(red_channel))

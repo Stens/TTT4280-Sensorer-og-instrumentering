@@ -24,10 +24,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy.signal as signal
 
+def signaltonoise(a, axis=0, ddof=0):
+    a = np.asanyarray(a)
+    m = a.mean(axis)
+    sd = a.std(axis=axis, ddof=ddof)
+    return np.where(sd == 0, 0, m/sd)
+
 def moving_average(x, w):
     return np.convolve(x, np.ones(w), 'valid') / w
 
-def extract_vals(filename, output_filename):
+def extract_vals(filename):
     #read video file
     cap = cv2.VideoCapture(filename, cv2.CAP_FFMPEG)
     if not cap.isOpened():
@@ -48,9 +54,10 @@ def extract_vals(filename, output_filename):
 
         #display window for selection of ROI
         if count == 0:
+            cv2.namedWindow("Image",2)
             window_text = 'Select ROI by dragging the mouse, and press SPACE or ENTER once satisfied.'
-            ROI = cv2.selectROI(window_text, frame) #ROI contains: [x, y, w, h] for selected rectangle
-            cv2.destroyWindow(window_text)
+            ROI = cv2.selectROI("Image", frame) #ROI contains: [x, y, w, h] for selected rectangle
+            cv2.destroyWindow("Image")
             print("Looping through video.")
 
         #calculate mean
@@ -60,41 +67,48 @@ def extract_vals(filename, output_filename):
 
     cap.release()
 
-    #save to file in order R, G, B.
-    np.savetxt(output_filename, np.flip(mean_signal, 1))
-    print("Data saved to '" + output_filename + "', fps = " + str(fps) + " frames/second")
-    return mean_signal
+    return mean_signal, fps
 
 
-def find_heartbeat(data):
-    red_channel = data[:,2]
-    red_channel = signal.detrend(red_channel, type="constant")
-    red_channel = red_channel[4:] - moving_average(red_channel, 5)
+def find_heartbeat(data, fps):
+    width = 25
+    labels = ["Blue", "Green", "Red"]
+    fps = 40
+    for chan in range(data.shape[1]):
+        channel = data[:,chan]
+        snr = signaltonoise(channel)
+        print("SNR before: "+str(snr))
+        channel = signal.detrend(channel, type="constant")
+        channel = channel[width-1:] - moving_average(channel, width)
 
-    freqs = np.fft.fftfreq(len(red_channel),1/40)
-    spectrum = np.fft.fft(red_channel, len(red_channel))
-    spectrum = np.fft.fftshift(spectrum)
-    freqs = np.fft.fftshift(freqs)
-    # freqs = np.linspace(0,len(spectrum)*steps,len(spectrum)*steps)
-    plt.plot(red_channel)
-    plt.show()
-    plt.plot(freqs, abs(spectrum))
-    plt.show()
-    peakfreq = np.argmax(abs(spectrum))
-    pulse = abs(freqs[peakfreq])*60
-    print("Pulse: "+ str(pulse) + "bpm")
+        freqs = np.fft.fftfreq(len(channel),1/fps)
+        spectrum = np.fft.fft(channel, len(channel))
+        spectrum = np.fft.fftshift(spectrum)
+        freqs = np.fft.fftshift(freqs)
+        # freqs = np.linspace(0,len(spectrum)*steps,len(spectrum)*steps)
+        plt.plot(channel)
+        plt.title(labels[chan])
+        plt.show()
+        plt.plot(freqs, abs(10*np.log10((spectrum))))
+        plt.title(labels[chan])
+
+        plt.show()
+        peakfreq = np.argmax(abs(spectrum))
+        pulse = abs(freqs[peakfreq])*60
+        snr = signaltonoise(channel)
+        print("SNR after: " +str(snr))
+        print("Pulse: "+ str(pulse) + "bpm")
 
     
 
 
 #CLI options
-if len(sys.argv) < 3:
+if len(sys.argv) < 2:
     print("Select smaller ROI of a video file, and save the mean of each image channel to file, one column per color channel (R, G, B), each row corresponding to a video frame number.")
     print("")
     print("Usage:\npython " + sys.argv[0] + " [path to input video file] [path to output data file]")
     exit()
 filename = sys.argv[1]
-output_filename = sys.argv[2]
 
-dat =  extract_vals(filename, output_filename)
-find_heartbeat(dat)
+dat , fps=  extract_vals(filename)
+find_heartbeat(dat, fps)
